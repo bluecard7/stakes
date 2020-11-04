@@ -1,0 +1,12 @@
+button.rounded-corners {
+    border: none;
+    outline: none;
+    border-radius: 10px;
+    color: #fff;
+}
+
+button.sizable {
+    height: 50px;
+    width: 100px;
+    font-size: medium;
+}
