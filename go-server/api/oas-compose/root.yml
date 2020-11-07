@@ -1,0 +1,23 @@
+openapi: 3.0.3
+
+# templating based on env in oas compose?
+
+prepaths:
+  - clocking-paths.yml
+
+security:
+  - stakesAuth:
+    - 
+
+# generate schema and see the code for this
+# still would need the actual server, but wondering if this wraps my requests with auth
+components:
+  securitySchemes:
+    stakesAuth:
+      type: oauth2
+      flows:
+        authorizationUrl: authProvider.com
+        tokenUrl: pass
+        refreshUrl: pass
+        scopes:
+          someScope: describe scope
