@@ -2,7 +2,7 @@ package datasource
 
 import (
 	"database/sql"
-	"stakes/internal/configure"
+	"stakes/internal/config"
 	_ "github.com/lib/pq"
 )
 
