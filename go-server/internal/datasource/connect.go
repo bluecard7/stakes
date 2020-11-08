@@ -8,6 +8,8 @@ import (
 	_ "github.com/lib/pq" // psql driver
 )
 
+var _ = sql.Drivers
+
 func PrepDB() {
 	connStr := fmt.Sprintf(
 		"postgres://%s:%s@%s/%s?sslmode=verify-full",
@@ -17,5 +19,5 @@ func PrepDB() {
 		config.Get("psql.dbName"),
 	)
 
-	db, err := sql.Open("postgres", connStr)
+	fmt.Println(connStr)
 }

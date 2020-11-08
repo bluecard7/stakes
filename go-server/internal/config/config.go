@@ -1,27 +1,18 @@
 package config
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/viper"
 )
 
 func init() {
-	currDir, _ := os.Getwd()
-	projectBase := fmt.Sprintf("%s", currDir)
-	fmt.Println("Project base dir", projectBase)
 	viper.SetConfigName("properties")
 	viper.SetConfigType("yml")
-	viper.AddConfigPath(projectBase + "/configs")
+	// ASSUMES: binary is ran from go-server/
+	viper.AddConfigPath("./configs")
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			panic(fmt.Errorf("fatal error config file: %s", err))
-		} else {
-			panic(fmt.Errorf("Another err: %s", err))
-		}
+		panic(err)
 	}
 }
 
