@@ -1,0 +1,5 @@
+# organize by environment
+psql:
+  user: someUser
+  password: somePassword
+  port: 5432
