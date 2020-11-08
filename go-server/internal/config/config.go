@@ -3,28 +3,29 @@ package config
 import (
 	"fmt"
 	"os"
+
 	"github.com/spf13/viper"
 )
 
-const (
-	PROJECT_BASE = fmt.Sprintf("%s/../..",os.Getwd())
-)
-
 func init() {
-	fmt.Println("Project base dir", PROJECT_BASE)
-	viper.SetConfigName("properties.yml")
-	viper.AddConfigPath(PROJECT_BASE + "/configs")
-	
+	currDir, _ := os.Getwd()
+	projectBase := fmt.Sprintf("%s", currDir)
+	fmt.Println("Project base dir", projectBase)
+	viper.SetConfigName("properties")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath(projectBase + "/configs")
+
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("fatal error config file: %s", err))
+		} else {
+			panic(fmt.Errorf("Another err: %s", err))
+		}
 	}
 }
 
-func Get(key string) string{
-	value, ok := viper.Get(key).(string)
-	if !ok {
-		panic(fmt.Errorf("couldn't get value from config: %s \n", key))
-	}
+func Get(key string) interface{} {
+	value := viper.Get(key)
 	return value
 }
