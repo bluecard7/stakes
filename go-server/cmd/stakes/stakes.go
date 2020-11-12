@@ -1,9 +1,11 @@
 package main
 
 import (
-	"stakes/internal/datasource"
+	"stakes/internal/db"
 )
 
 func main() {
-	datasource.PrepDB();
+	dbConn := db.Open()
+
+	db.Close(dbConn)
 }

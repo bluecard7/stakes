@@ -1,4 +1,5 @@
-CREATE TABLE CLOCK (
-    user_id serial PRIMARY KEY
-    clock_in
+CREATE TABLE RECORDS (
+    user_email varchar(128),
+    clock_interval tsrange,
+    created_at date
 );

@@ -1,8 +1,8 @@
 FROM postgres:alpine
 
-# could use _FILE
-ENV POSTGRES_USER=
-ENV POSTGRES_PASSWORD=
-
 WORKDIR /docker-entrypoint-initdb.d
 COPY initdb-scripts/* .
+
+# could use _FILE
+ENV POSTGRES_USER=username
+ENV POSTGRES_PASSWORD=password

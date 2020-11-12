@@ -7,7 +7,7 @@ import (
 func init() {
 	viper.SetConfigName("properties")
 	viper.SetConfigType("yml")
-	// ASSUMES: binary is ran from go-server/
+	// assumes binary is ran from go-server/
 	viper.AddConfigPath("./configs")
 
 	err := viper.ReadInConfig()
