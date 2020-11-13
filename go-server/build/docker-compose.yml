@@ -3,7 +3,7 @@ version: '3.1'
 services:
 
   db:
-    image: stack-postgres
+    image: stack-db
     restart: always
 
   # provides web interface to db
