@@ -1,0 +1,1 @@
+docker build -f stackdb-dockerfile -t stackdb .

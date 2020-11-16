@@ -1,0 +1,44 @@
+openapi: 3.0.3
+
+info:
+  title: Stakes Timekeeping API
+  version: 1.0.0
+
+paths:
+  /clock:           
+    put:
+      description: Clocks user in or out
+      operationId: clock
+      responses:
+        '200':
+          description: Responds if user clocked in or out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clocked:
+                    description: Describes if user has clocked "in" or "out" 
+                    type: string
+
+        # '4XX':
+        #   default:
+        #     description: default behavior/err
+        #     content:
+
+# security:
+#   - stakesAuth:
+#     - 
+
+# generate schema and see the code for this
+# still would need the actual server, but wondering if this wraps my requests with auth
+# components:
+#   securitySchemes:
+#     stakesAuth:
+#       type: oauth2
+#       flows:
+#         authorizationUrl: authProvider.com
+#         tokenUrl: pass
+#         refreshUrl: pass
+#         scopes:
+#           someScope: describe scope
