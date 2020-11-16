@@ -1,20 +1,24 @@
 package main
 
 import (
-	"net/http"
-	"stakes/internal/routes"
+	"fmt"
+	"stakes/internal/data"
 )
 
 func main() {
-	// dbConn := db.Open()
-	// db.Close(dbConn)
 
-	server := http.Server{
-		Addr: "127.0.0.1:8080",
-	}
+	record := data.ClockIn()
+	fmt.Println(record)
+	record = data.GetRecordById(record.Id)
+	fmt.Println(record)
+	data.Close()
 
-	http.HandleFunc("/clock", routes.Clock)
+	// server := http.Server{
+	// 	Addr: "127.0.0.1:8080",
+	// }
 
-	// TODO:: ListenAndServeTLS later on with user auth
-	server.ListenAndServe()
+	// http.HandleFunc("/clock", routes.Clock)
+
+	// // TODO:: ListenAndServeTLS later on with user auth
+	// server.ListenAndServe()
 }

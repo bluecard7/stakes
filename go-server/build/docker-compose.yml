@@ -5,6 +5,8 @@ services:
   db:
     image: stackdb
     restart: always
+    ports:
+      - 5432:5432
 
   # provides web interface to db
   adminer:
