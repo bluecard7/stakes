@@ -3,31 +3,52 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"time"
+
+	"stakes/internal/data"
 )
 
 // Clock wraps handlers for methods on "/clock" route
 func Clock(res http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "POST":
-		clockIn(res)
-	case "PATCH":
-		clockOut(res)
+		clock(res, req)
 	}
 }
 
-// ClockResponse models JSON returned in response to rquests on "/clock"
+// ClockRequest models request body expected in requests on "/clock"
+type ClockRequest struct {
+	Email string `json:"email"`
+}
+
+// ClockResponse models JSON returned in response to requests on "/clock"
 type ClockResponse struct {
 	Clocked string `json:"clocked"`
 }
 
-func clockIn(res http.ResponseWriter) {
-	res.Header().Set("Content-Type", "application/json")
-	output, _ := json.Marshal(ClockResponse{Clocked: "IN"})
-	res.Write(output)
-}
+func clock(res http.ResponseWriter, req *http.Request) {
+	var clockReq ClockRequest
+	err := json.NewDecoder(req.Body).Decode(&clockReq)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-func clockOut(res http.ResponseWriter) {
+	var clockType string
+
+	unfinished := data.FindUnfinishedRecord(clockReq.Email)
+	if unfinished == nil {
+		data.InsertRecord(clockReq.Email, time.Now())
+		clockType = "IN"
+	} else {
+		unfinished.ClockOut = time.Now()
+		data.UpdateRecord(unfinished)
+		clockType = "OUT"
+	}
+	// if that doesn't exist, insert new record
+	data.PrintRecords(clockReq.Email)
+
 	res.Header().Set("Content-Type", "application/json")
-	output, _ := json.Marshal(ClockResponse{Clocked: "OUT"})
+	output, _ := json.Marshal(ClockResponse{Clocked: clockType})
 	res.Write(output)
 }

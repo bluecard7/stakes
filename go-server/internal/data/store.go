@@ -29,7 +29,6 @@ func init() {
 	}
 }
 
-// Close closes a given sql.DB instance
 func Close() {
 	db.Close()
 }
