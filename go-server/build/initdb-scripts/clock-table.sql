@@ -1,6 +1,6 @@
 CREATE TABLE clock_records (
-    id serial PRIMARY KEY,
-    email varchar(128) UNIQUE NOT NULL,
+    id uuid PRIMARY KEY,
+    email varchar(128) NOT NULL,
     clockIn timestamp,
     clockOut timestamp
 );

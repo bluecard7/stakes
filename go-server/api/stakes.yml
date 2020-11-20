@@ -6,9 +6,17 @@ info:
 
 paths:
   /clock:           
-    put:
+    post:
       description: Clocks user in or out
-      operationId: clock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "my@email.com"
       responses:
         '200':
           description: Responds if user clocked in or out
@@ -18,27 +26,5 @@ paths:
                 type: object
                 properties:
                   clocked:
-                    description: Describes if user has clocked "in" or "out" 
                     type: string
-
-        # '4XX':
-        #   default:
-        #     description: default behavior/err
-        #     content:
-
-# security:
-#   - stakesAuth:
-#     - 
-
-# generate schema and see the code for this
-# still would need the actual server, but wondering if this wraps my requests with auth
-# components:
-#   securitySchemes:
-#     stakesAuth:
-#       type: oauth2
-#       flows:
-#         authorizationUrl: authProvider.com
-#         tokenUrl: pass
-#         refreshUrl: pass
-#         scopes:
-#           someScope: describe scope
+                    example: "IN" 

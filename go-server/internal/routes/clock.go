@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"stakes/internal/data"
+
+	"github.com/google/uuid"
 )
 
 // Clock wraps handlers for methods on "/clock" route
@@ -26,6 +28,7 @@ type ClockResponse struct {
 	Clocked string `json:"clocked"`
 }
 
+// curl -X POST -d '{"email":"my@email.com"}' -H 'Content-Type: application/json' http://localhost:8000/clock
 func clock(res http.ResponseWriter, req *http.Request) {
 	var clockReq ClockRequest
 	err := json.NewDecoder(req.Body).Decode(&clockReq)
@@ -35,18 +38,13 @@ func clock(res http.ResponseWriter, req *http.Request) {
 	}
 
 	var clockType string
-
-	unfinished := data.FindUnfinishedRecord(clockReq.Email)
-	if unfinished == nil {
+	if id := data.FindUnfinishedRecord(clockReq.Email); id == uuid.Nil {
 		data.InsertRecord(clockReq.Email, time.Now())
 		clockType = "IN"
 	} else {
-		unfinished.ClockOut = time.Now()
-		data.UpdateRecord(unfinished)
+		data.FinishRecord(id, time.Now())
 		clockType = "OUT"
 	}
-	// if that doesn't exist, insert new record
-	data.PrintRecords(clockReq.Email)
 
 	res.Header().Set("Content-Type", "application/json")
 	output, _ := json.Marshal(ClockResponse{Clocked: clockType})
