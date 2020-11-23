@@ -45,7 +45,6 @@ func clock(res http.ResponseWriter, req *http.Request) {
 		data.FinishRecord(id, time.Now())
 		clockType = "OUT"
 	}
-
 	res.Header().Set("Content-Type", "application/json")
 	output, _ := json.Marshal(ClockResponse{Clocked: clockType})
 	res.Write(output)

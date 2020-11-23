@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq" // psql driver
 )
 
+// Package level variable set by Open() that is used for database operations
 var db *sql.DB
 
 // Open opens a connection to a PostgreSQL instance
@@ -27,8 +28,4 @@ func init() {
 		// log? panic?
 		panic(err)
 	}
-}
-
-func Close() {
-	db.Close()
 }

@@ -1,100 +1,91 @@
 package data
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// A Record represents a time range
+// A Record consists of an email that unique identifies a user and
+// a pair of times that the user clocked in and out at respectively
 type Record struct {
-	Id       uuid.UUID
+	ID       uuid.UUID
 	Email    string
 	ClockIn  time.Time
 	ClockOut time.Time
 }
 
 func (r *Record) String() string {
-	return fmt.Sprintf("Record<%d, %s, %s, %s>", r.Id, r.Email, r.ClockIn, r.ClockOut)
+	return fmt.Sprintf("Record<%d, %s, %s, %s>", r.ID, r.Email, r.ClockIn, r.ClockOut)
 }
 
-func FindUnfinishedRecord(email string) (id uuid.UUID) {
-	sqlcmd := `
-		select id
-		from clock_records
-		where email = $1 and clockOut = $2
-	`
-	err := db.QueryRow(sqlcmd, email, time.Time{}).Scan(&id)
-	if err == sql.ErrNoRows {
-		return uuid.Nil
-	} else if err != nil {
-		panic(err)
-	}
-	return
-}
-
+// InsertRecord enters a Record in the database.
+// If called, it's assumed to be clocking in, so it will insert a new
+// record with the nil equivalent of time.Time for Record.ClockedOut.
 func InsertRecord(email string, clockedAt time.Time) {
-	sqlcmd := `
+	queryStr := `
 		insert into clock_records (id, email, clockIn, clockOut)
 		values ($1, $2, $3, $4)
 	`
-	stmt, err := db.Prepare(sqlcmd)
-	if err != nil {
-		panic(err)
+	stmt := prepSQLStmt(db, queryStr)
+	if stmt != nil {
+		defer stmt.Close()
 	}
 	defer stmt.Close()
-
-	var id uuid.UUID
-	id, err = uuid.NewRandom()
-	if err != nil {
-		panic(err)
-	}
-	_, err = stmt.Exec(id, email, clockedAt, time.Time{})
-	if err != nil {
-		panic(err)
-	}
+	id := randomUUID()
+	execSQLStmt(stmt, id, email, clockedAt, time.Time{})
 }
 
+// FinishRecord updates the clockedOut column of the entry with id.
+// If called, it's assumed to be clocking out (hence "finishing" the record).
 func FinishRecord(id uuid.UUID, clockedAt time.Time) {
-	sqlcmd := `
+	queryStr := `
 		update clock_records 
 		set clockOut = $2 
 		where id = $1
 	`
-	stmt, err := db.Prepare(sqlcmd)
-	if err != nil {
-		panic(err)
-	}
+	stmt := prepSQLStmt(db, queryStr)
 	defer stmt.Close()
-
-	_, err = stmt.Exec(id, clockedAt)
-	if err != nil {
-		panic(err)
-	}
+	execSQLStmt(stmt, id, clockedAt)
 }
 
-func PrintRecords(email string) {
-	record := Record{}
-	sqlcmd := "select * from clock_records where email = $1"
-	rows, err := db.Query(sqlcmd, email)
-	if err != nil {
-		panic(err)
+// FindUnfinishedRecord finds an entry that is "unfinished", or
+// have its clockOut column to the nil equivalent for time.Time.
+//
+// There should only be one such entry, as every clockIn should
+// be completed by a clockOut, but if multiple entries match the criteria
+// it will return the id of the first row scanned.
+func FindUnfinishedRecord(email string) uuid.UUID {
+	queryStr := `
+		select id
+		from clock_records
+		where email = $1 and clockOut = $2
+	`
+	rows := query(db, queryStr, email, time.Time{})
+	id := uuid.Nil
+	if rows != nil && rows.Next() {
+		rows.Scan(&id)
+		rows.Close()
 	}
-	defer rows.Close()
+	return id
+}
 
-	for rows.Next() {
-		err = rows.Scan(&record.Id, &record.Email, &record.ClockIn, &record.ClockOut)
-		if err != nil {
-			panic(err)
+// FindRecordsInTimeFrame retrieves all time records in the specified range
+// accessToken is gained from an email?
+func FindRecordsInTimeFrame(email, accessToken, dateRange string) []*Record {
+	queryStr := "select * from clock_records where email = $1"
+	records := []*Record{}
+	rows := query(db, queryStr, email)
+	if rows != nil {
+		for rows.Next() {
+			record := new(Record)
+			err := rows.Scan(&record.ID, &record.Email, &record.ClockIn, &record.ClockOut)
+			if err != nil {
+				records = append(records, record)
+			}
 		}
-		fmt.Println(record)
+		rows.Close()
 	}
-}
-
-// GetRecords retrieves all time records in the specified range
-// accessToken is gained
-func GetRecordsInTimeFrame(accessToken, dateRange string) {
-
+	return records
 }
