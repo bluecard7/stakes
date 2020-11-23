@@ -12,7 +12,7 @@ func randomUUID() uuid.UUID {
 	if err != nil {
 		id = uuid.Nil
 	}
-	log.Printf("UUID: %s\n", id)
+	log.Println("randomUUID:", id)
 	return id
 }
 
@@ -21,7 +21,7 @@ func query(db *sql.DB, queryStr string, args ...interface{}) *sql.Rows {
 	if err != nil {
 		rows = nil
 	}
-	log.Println("Query:", queryStr)
+	log.Println("query:", queryStr)
 	return rows
 }
 
@@ -30,7 +30,8 @@ func prepSQLStmt(db *sql.DB, queryStr string) *sql.Stmt {
 	if err != nil {
 		stmt = nil
 	}
-	log.Println("Prepped SQL queryStr", queryStr, stmt)
+	log.Println("prepSQLStmt:", queryStr)
+	log.Println("stmt != nil", stmt != nil)
 	return stmt
 }
 
@@ -38,6 +39,5 @@ func execSQLStmt(stmt *sql.Stmt, args ...interface{}) {
 	if stmt == nil {
 		return
 	}
-	result, _ := stmt.Exec(args...)
-	log.Println("Exec'd stmt", stmt, result)
+	stmt.Exec(args...)
 }

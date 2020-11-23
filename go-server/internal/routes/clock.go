@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -31,8 +30,8 @@ type ClockResponse struct {
 // curl -X POST -d '{"email":"my@email.com"}' -H 'Content-Type: application/json' http://localhost:8000/clock
 func clock(res http.ResponseWriter, req *http.Request) {
 	var clockReq ClockRequest
-	err := json.NewDecoder(req.Body).Decode(&clockReq)
-	if err != nil {
+	if err := decodeRequestBody(req, &clockReq); err != nil {
+		// probably replace with own error struct response
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -45,7 +44,5 @@ func clock(res http.ResponseWriter, req *http.Request) {
 		data.FinishRecord(id, time.Now())
 		clockType = "OUT"
 	}
-	res.Header().Set("Content-Type", "application/json")
-	output, _ := json.Marshal(ClockResponse{Clocked: clockType})
-	res.Write(output)
+	respondWithJSON(res, ClockResponse{Clocked: clockType})
 }

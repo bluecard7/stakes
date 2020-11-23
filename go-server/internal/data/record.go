@@ -81,7 +81,7 @@ func FindRecordsInTimeFrame(email, accessToken, dateRange string) []*Record {
 		for rows.Next() {
 			record := new(Record)
 			err := rows.Scan(&record.ID, &record.Email, &record.ClockIn, &record.ClockOut)
-			if err != nil {
+			if err == nil {
 				records = append(records, record)
 			}
 		}
