@@ -1,54 +1,36 @@
 import React from 'react';
-import { DateRangePicker } from 'react-date-range';
 
-import 'react-date-range/dist/styles.css';
-import 'react-date-range/dist/theme/default.css';
+import 'styles/RecordsView.css';
+import { inColor, outColor } from 'theme/in_out';
 
 type Record = {in: string, out: string}
 
-// would be cool to pull events and display some icon for certain holidays
 function RecordCell({record}: {record: Record}) {
     return (
-        <div style={{width: 100, margin: 10, color: '#fff', textAlign: 'center'}}>
-            <div style={{
-                backgroundColor: '#606060',
-            }}>{new Date().toLocaleDateString()}</div>
-            <div style={{
-                backgroundColor: '#228B22',
-            }}>{record.in}</div>
-            <div style={{
-                backgroundColor: '#800000',
-            }}>{record.out}</div>
+        <div className="cell">
+            <div style={{backgroundColor: inColor}}>{record.in}</div>
+            <div style={{backgroundColor: outColor}}>{record.out}</div>
         </div>
     );
 }
 
 // add some column grouping imagery (rounded container around cells)
-function RecordColumn({numEntries}: {numEntries: number}) {
+function RecordRow({numEntries}: {numEntries: number}) {
     const records = Array<Record>(numEntries).fill({in: 'ininin', out: 'outout'});
     return (
-        <div style={{
-            display: 'flex',
-            flexFlow: 'column',
-        }}>
-            {
-                records.map(record => <RecordCell record={record}/>)
-            }
+        <div className="cell-row">
+            <div>{new Date().toLocaleDateString()}</div>
+            {records.map(record => <RecordCell record={record}/>)}
         </div> 
     );
 }
 
 function RecordsView() {
-    const columns = Array<number>(5).fill(2);
+    const rows = Array<number>(30).fill(2);
 
     return (
-        <div style={{
-            display: 'flex',
-            flexFlow: 'row',
-        }}>
-            {
-                columns.map(num  => <RecordColumn numEntries={num}/>)
-            }
+        <div className="records-view">
+            {rows.map(num  => <RecordRow numEntries={num}/>)}
         </div>
     );
 }

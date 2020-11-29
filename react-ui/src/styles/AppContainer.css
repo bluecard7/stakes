@@ -1,4 +1,4 @@
-div.stakes-container {
+.stakes-container {
     justify-self: center;
     display: flex;
     flex-flow: column;
