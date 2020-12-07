@@ -71,15 +71,22 @@ func FindUnfinishedRecord(email string) uuid.UUID {
 	return id
 }
 
-// FindRecordsInTimeFrame retrieves all time records in the specified range
-// accessToken is gained from an email?
-func FindRecordsInTimeFrame(email, accessToken, dateRange string) []*Record {
-	queryStr := "select * from clock_records where email = $1"
-	records := []*Record{}
-	rows := query(db, queryStr, email)
+// FindRecordsInTimeFrame retrieves all time records whose
+// whose clockIn is in [fromISO, toISO].
+// fromISO and toISO are ISO8601 strings that represent dates.
+// toISO needs to be one day after the intended end of range, or it will not be included.
+func FindRecordsInTimeFrame(email, fromISO, toISO string) []Record {
+	queryStr := `
+		select * from clock_records 
+		where email = $1 and clockIn <@ tsrange($2, $3, '[]')
+	`
+	fromTime, _ := time.Parse(time.RFC3339, fromISO)
+	toTime, _ := time.Parse(time.RFC3339, toISO)
+	records := []Record{}
+	rows := query(db, queryStr, email, fromTime, toTime)
 	if rows != nil {
 		for rows.Next() {
-			record := new(Record)
+			record := Record{}
 			err := rows.Scan(&record.ID, &record.Email, &record.ClockIn, &record.ClockOut)
 			if err == nil {
 				records = append(records, record)

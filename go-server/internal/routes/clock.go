@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -12,25 +13,31 @@ import (
 // Clock wraps handlers for methods on "/clock" route
 func Clock(res http.ResponseWriter, req *http.Request) {
 	switch req.Method {
+	case "GET":
+		getRecords(res, req)
 	case "POST":
 		clock(res, req)
 	}
 }
 
-// ClockRequest models request body expected in requests on "/clock"
-type ClockRequest struct {
-	Email string `json:"email"`
-}
-
-// ClockResponse models JSON returned in response to requests on "/clock"
-type ClockResponse struct {
-	Clocked string `json:"clocked"`
+// curl -H 'Content-Type: application/json' 'http://localhost:8000/clock?from=2020-11-22T08:00:00.000Z&to=2020-11-22T08:00:00.000Z'
+func getRecords(res http.ResponseWriter, req *http.Request) {
+	query := req.URL.Query()
+	email := "my@email.com"
+	fromISO := query["from"][0]
+	toISO := query["to"][0]
+	records := data.FindRecordsInTimeFrame(email, fromISO, toISO)
+	respondWithJSON(res, struct {
+		Records []data.Record `json:"records"`
+	}{Records: records})
 }
 
 // curl -X POST -d '{"email":"my@email.com"}' -H 'Content-Type: application/json' http://localhost:8000/clock
 func clock(res http.ResponseWriter, req *http.Request) {
-	var clockReq ClockRequest
-	if err := decodeRequestBody(req, &clockReq); err != nil {
+	var clockReq struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&clockReq); err != nil {
 		// probably replace with own error struct response
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -44,5 +51,7 @@ func clock(res http.ResponseWriter, req *http.Request) {
 		data.FinishRecord(id, time.Now())
 		clockType = "OUT"
 	}
-	respondWithJSON(res, ClockResponse{Clocked: clockType})
+	respondWithJSON(res, struct {
+		Clocked string `json:"clocked"`
+	}{Clocked: clockType})
 }
