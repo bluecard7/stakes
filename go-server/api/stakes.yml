@@ -1,0 +1,30 @@
+openapi: 3.0.3
+
+info:
+  title: Stakes Timekeeping API
+  version: 1.0.0
+
+paths:
+  /clock:           
+    post:
+      description: Clocks user in or out
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "my@email.com"
+      responses:
+        '200':
+          description: Responds if user clocked in or out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clocked:
+                    type: string
+                    example: "IN" 
