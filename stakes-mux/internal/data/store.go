@@ -2,17 +2,15 @@ package data
 
 import (
 	"database/sql"
+	"log"
 
 	_ "github.com/lib/pq" // psql driver
 )
 
-// Package level variable set by Open() that is used for database operations
-var db *sql.DB
-
-// Open opens a connection to a PostgreSQL instance
+// InitRecordTable opens a connection to a PostgreSQL instance
 // with configuration loaded in stakes/internal/config.
 // Then that connection is returned.
-func init() {
+func InitRecordTable() RecordTable {
 	// connStr := fmt.Sprintf(
 	// 	"postgres://%s:%s@%s/%s?sslmode=verify-full",
 	// 	config.Get("psql.user"),
@@ -21,11 +19,9 @@ func init() {
 	// 	config.Get("psql.dbName"),
 	// )
 
-	var err error
-	// db, err = sql.Open("postgres", "user=username password=password dbname=stakes sslmode=disable")
-	db, err = sql.Open("postgres", "postgres://username:password@localhost/stakes?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://username:password@localhost/stakes?sslmode=disable")
 	if err != nil {
-		// log? panic?
-		panic(err)
+		log.Fatal("Failed to connect to database", err)
 	}
+	return RecordTable{db: db}
 }
