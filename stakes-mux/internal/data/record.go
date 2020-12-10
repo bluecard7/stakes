@@ -11,34 +11,34 @@ import (
 // A Record consists of an email that unique identifies a user and
 // a pair of times that the user clocked in and out at respectively
 type Record struct {
-	ID       uuid.UUID
-	Email    string
-	ClockIn  time.Time
-	ClockOut time.Time
+	ID       uuid.UUID `json:"id"`
+	Email    string    `json:"-"`
+	ClockIn  time.Time `json:"clockIn"`
+	ClockOut time.Time `json:"clockOut"`
 }
 
 func (r *Record) String() string {
 	return fmt.Sprintf("Record<%d, %s, %s, %s>", r.ID, r.Email, r.ClockIn, r.ClockOut)
 }
 
-// RecordTableInterface defines operations used to interact with Record table
+// RecordTable defines operations used to interact with Record table
 // for routes
-type RecordTableInterface interface {
+type RecordTable interface {
 	InsertRecord(email string, clockedAt time.Time)
 	FinishRecord(id uuid.UUID, clockedAt time.Time)
 	FindUnfinishedRecord(email string) uuid.UUID
 	FindRecordsInTimeFrame(email, fromISO, toISO string) []Record
 }
 
-// RecordTable implements RecordTableInterface
-type RecordTable struct {
+// RecordTableImpl implements RecordTableInterface
+type RecordTableImpl struct {
 	db *sql.DB
 }
 
 // InsertRecord enters a Record in the database.
 // If called, it's assumed to be clocking in, so it will insert a new
 // record with the nil equivalent of time.Time for Record.ClockedOut.
-func (table RecordTable) InsertRecord(email string, clockedAt time.Time) {
+func (table RecordTableImpl) InsertRecord(email string, clockedAt time.Time) {
 	queryStr := `
 		insert into clock_records (id, email, clockIn, clockOut)
 		values ($1, $2, $3, $4)
@@ -56,7 +56,7 @@ func (table RecordTable) InsertRecord(email string, clockedAt time.Time) {
 
 // FinishRecord updates the clockedOut column of the entry with id.
 // If called, it's assumed to be clocking out (hence "finishing" the record).
-func (table RecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) {
+func (table RecordTableImpl) FinishRecord(id uuid.UUID, clockedAt time.Time) {
 	queryStr := `
 		update clock_records 
 		set clockOut = $2 
@@ -75,7 +75,7 @@ func (table RecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) {
 // There should only be one such entry, as every clockIn should
 // be completed by a clockOut, but if multiple entries match the criteria
 // it will return the id of the first row scanned.
-func (table RecordTable) FindUnfinishedRecord(email string) uuid.UUID {
+func (table RecordTableImpl) FindUnfinishedRecord(email string) uuid.UUID {
 	queryStr := `
 		select id
 		from clock_records
@@ -94,13 +94,13 @@ func (table RecordTable) FindUnfinishedRecord(email string) uuid.UUID {
 // whose clockIn is in [fromISO, toISO].
 // fromISO and toISO are ISO8601 strings that represent dates.
 // toISO needs to be one day after the intended end of range, or it will not be included.
-func (table RecordTable) FindRecordsInTimeFrame(email, fromISO, toISO string) []Record { // map result from * to literals?
+func (table RecordTableImpl) FindRecordsInTimeFrame(email, from, to string) []Record { // map result from * to literals?
 	queryStr := `
 		select * from clock_records 
 		where email = $1 and clockIn <@ tsrange($2, $3, '[]')
 	`
-	fromTime, _ := time.Parse("2006-01-02", fromISO)
-	toTime, _ := time.Parse("2006-01-02", toISO)
+	fromTime, _ := time.Parse("2006-01-02", from)
+	toTime, _ := time.Parse("2006-01-02", to)
 	records := []Record{}
 	rows, err := table.db.Query(queryStr, email, fromTime, toTime)
 	if err == nil && rows != nil {

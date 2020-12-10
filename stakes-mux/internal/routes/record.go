@@ -8,16 +8,12 @@ import (
 	"stakes/internal/data"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 )
 
-func StakesRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.Path("/clock").HandlerFunc(ClockHandler)
-	return r
-}
+// TODO:: middleware to validate JWT token and extract email
 
-func ClockHandler(table data.RecordTableInterface) http.HandleFunc {
+// ClockHandler returns handler function
+func ClockHandler(table data.RecordTable) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
@@ -29,36 +25,35 @@ func ClockHandler(table data.RecordTableInterface) http.HandleFunc {
 }
 
 // curl -H 'Content-Type: application/json' 'http://localhost:8000/clock?from=2020-11-22&to=2020-11-23'
-func getRecords(res http.ResponseWriter, req *http.Request, table data.RecordTableInterface) {
+func getRecords(res http.ResponseWriter, req *http.Request, table data.RecordTable) {
 	query := req.URL.Query()
+	// would email get from JWT in header
 	email := "my@email.com"
-	fromISO := query["from"][0]
-	toISO := query["to"][0]
-	records := table.FindRecordsInTimeFrame(email, fromISO, toISO)
-	respondWithJSON(res, struct {
+	from := query["from"][0]
+	to := query["to"][0]
+	records := table.FindRecordsInTimeFrame(email, from, to)
+	// respondWithJSON(res, struct {
+	// 	Records []data.Record `json:"records"`
+	// }{Records: records})
+
+	res.Header().Set("Content-Type", "application/json")
+	output, _ := json.Marshal(struct {
 		Records []data.Record `json:"records"`
 	}{Records: records})
+	res.Write(output)
 }
 
 // curl -X POST -d '{"email":"my@email.com"}' -H 'Content-Type: application/json' http://localhost:8000/clock
-func clock(res http.ResponseWriter, req *http.Request, table data.RecordTableInterface) {
-	var clockReq struct {
-		Email string `json:"email"`
-	}
-	if err := json.NewDecoder(req.Body).Decode(&clockReq); err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var clockType string
-	if id := table.FindUnfinishedRecord(clockReq.Email); id == uuid.Nil {
-		table.InsertRecord(clockReq.Email, time.Now())
-		clockType = "IN"
+func clock(res http.ResponseWriter, req *http.Request, table data.RecordTable) {
+	// would email get from JWT in header
+	var record data.Record
+	clockedAt := time.Now()
+	if id := table.FindUnfinishedRecord("my@email.com"); id == uuid.Nil {
+		table.InsertRecord("my@email.com", clockedAt)
 	} else {
-		table.FinishRecord(id, time.Now())
-		clockType = "OUT"
+		table.FinishRecord(id, clockedAt)
 	}
-	respondWithJSON(res, struct {
-		Clocked string `json:"clocked"`
-	}{Clocked: clockType})
+	res.Header().Set("Content-Type", "application/json")
+	output, _ := json.Marshal(record)
+	res.Write(output)
 }

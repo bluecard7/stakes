@@ -2,16 +2,33 @@ package main
 
 import (
 	"net/http"
-	_ "stakes/internal/data"
-
-	"github.com/gorilla/mux"
+	"stakes/internal/data"
+	"stakes/internal/routes"
 )
 
 func main() {
+	// Handle configuration with flags
+	/*
+		viper.SetConfigName("properties")
+		viper.SetConfigType("yml")
+		viper.AddConfigPath("./configs")
+
+		err := viper.ReadInConfig()
+		if err != nil {
+			panic(err)
+		}
+	*/
+
+	recordTable := data.InitRecordTable(&data.TableConfig{
+		User:     "",
+		Password: "",
+		Host:     "",
+		DBName:   "",
+	})
 	srv := http.Server{
-		Addr:    ":8000",
-		Handler: mux.NewRouter(),
+		Addr: ":8000",
 	}
+	http.HandleFunc("/clock", routes.ClockHandler(recordTable))
 	// TODO:: ListenAndServeTLS later on with user auth
 	srv.ListenAndServe()
 }
