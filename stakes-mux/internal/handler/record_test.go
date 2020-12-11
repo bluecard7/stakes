@@ -15,12 +15,12 @@ import (
 type MockRecordTable struct {
 }
 
-func (table MockRecordTable) InsertRecord(email string, clockedAt time.Time) {
-
+func (table MockRecordTable) InsertRecord(email string, clockedAt time.Time) *data.Record {
+	return nil
 }
 
-func (table MockRecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) {
-
+func (table MockRecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) *data.Record {
+	return nil
 }
 
 func (table MockRecordTable) FindUnfinishedRecord(email string) uuid.UUID {
@@ -36,7 +36,6 @@ var (
 	response httptest.ResponseRecorder
 )
 
-// TODO:: put JWT token in header
 func TestMain(m *testing.M) {
 	mux = http.NewServeMux()
 	response = *httptest.NewRecorder()

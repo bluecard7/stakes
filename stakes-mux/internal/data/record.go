@@ -24,8 +24,8 @@ func (r *Record) String() string {
 // RecordTable defines operations used to interact with Record table
 // for routes
 type RecordTable interface {
-	InsertRecord(email string, clockedAt time.Time)
-	FinishRecord(id uuid.UUID, clockedAt time.Time)
+	InsertRecord(email string, clockedAt time.Time) *Record
+	FinishRecord(id uuid.UUID, clockedAt time.Time) *Record
 	FindUnfinishedRecord(email string) uuid.UUID
 	FindRecordsInTimeFrame(email, fromISO, toISO string) []Record
 }
@@ -35,10 +35,26 @@ type RecordTableImpl struct {
 	db *sql.DB
 }
 
+func (table RecordTableImpl) getRecord(id uuid.UUID) *Record {
+	queryStr := `
+		select id, clockIn, clockOut 
+		from clock_records
+		where id = $1
+	`
+	rows, err := table.db.Query(queryStr, id)
+	if err == nil && rows != nil && rows.Next() {
+		defer rows.Close()
+		record := Record{}
+		rows.Scan(&record.ID, &record.ClockIn, &record.ClockOut)
+		return &record
+	}
+	return nil
+}
+
 // InsertRecord enters a Record in the database.
 // If called, it's assumed to be clocking in, so it will insert a new
 // record with the nil equivalent of time.Time for Record.ClockedOut.
-func (table RecordTableImpl) InsertRecord(email string, clockedAt time.Time) {
+func (table RecordTableImpl) InsertRecord(email string, clockedAt time.Time) *Record {
 	queryStr := `
 		insert into clock_records (id, email, clockIn, clockOut)
 		values ($1, $2, $3, $4)
@@ -51,12 +67,12 @@ func (table RecordTableImpl) InsertRecord(email string, clockedAt time.Time) {
 	if err == nil {
 		stmt.Exec(id, email, clockedAt, time.Time{})
 	}
-	// success indicator?
+	return table.getRecord(id)
 }
 
 // FinishRecord updates the clockedOut column of the entry with id.
 // If called, it's assumed to be clocking out (hence "finishing" the record).
-func (table RecordTableImpl) FinishRecord(id uuid.UUID, clockedAt time.Time) {
+func (table RecordTableImpl) FinishRecord(id uuid.UUID, clockedAt time.Time) *Record {
 	queryStr := `
 		update clock_records 
 		set clockOut = $2 
@@ -67,6 +83,7 @@ func (table RecordTableImpl) FinishRecord(id uuid.UUID, clockedAt time.Time) {
 		defer stmt.Close()
 		stmt.Exec(id, clockedAt)
 	}
+	return table.getRecord(id)
 }
 
 // FindUnfinishedRecord finds an entry that is "unfinished", or

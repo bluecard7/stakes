@@ -15,12 +15,12 @@ import (
 func ClockHandler(table data.RecordTable) http.HandlerFunc {
 	return log(authenticate(func(w http.ResponseWriter, req *http.Request) {
 		newCtx := data.NewContext(req.Context(), table)
-		req.WithContext(newCtx)
+		newReq := req.WithContext(newCtx)
 		switch req.Method {
 		case "GET":
-			getRecords(w, req)
+			getRecords(w, newReq)
 		case "POST":
-			clock(w, req)
+			clock(w, newReq)
 		}
 	}))
 }
@@ -42,23 +42,27 @@ func getRecords(w http.ResponseWriter, req *http.Request) {
 
 // curl -X POST -d '{"email":"my@email.com"}' -H 'Content-Type: application/json' http://localhost:8000/clock
 func clock(w http.ResponseWriter, req *http.Request) {
-	var record data.Record
+	var record *data.Record
 	clockedAt := time.Now()
 	email, _ := user.FromContext(req.Context())
 	table, _ := data.FromContext(req.Context())
 	if id := table.FindUnfinishedRecord(email); id == uuid.Nil {
-		table.InsertRecord(email, clockedAt)
+		record = table.InsertRecord(email, clockedAt)
 	} else {
-		table.FinishRecord(id, clockedAt)
+		record = table.FinishRecord(id, clockedAt)
 	}
-	respondJSON(w, record)
+	if record == nil {
+		http.Error(w, "Sorry! Something failed on our end when you clocked in/out.", 404)
+		return
+	}
+	respondJSON(w, *record)
 }
 
 func respondJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	data, err := json.Marshal(v)
 	if err != nil {
-		http.Error(w, "Sorry! Couldn't send my response.", 404)
+		http.Error(w, "Sorry! Couldn't send back the response.", 404)
 	} else {
 		w.Write(data)
 	}

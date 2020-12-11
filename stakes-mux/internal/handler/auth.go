@@ -16,17 +16,15 @@ func authenticate(h http.HandlerFunc) http.HandlerFunc {
 			// get secret from file, env, etc
 			return []byte("secret"), nil
 		})
-		if err != nil {
-
+		if err == nil {
+			// TODO:: verify expireAt, and maybe other attrs like Issuers etc.
+			if claims, ok := token.Claims.(jwt.MapClaims); ok { // && claims.VerifyExpiresAt() {
+				email := claims["email"].(string)
+				newCtx := user.NewContext(req.Context(), email)
+				h(w, req.WithContext(newCtx))
+				return
+			}
 		}
-		// TODO:: verify expireAt, and maybe other attrs like Issuers etc.
-		if claims, ok := token.Claims.(jwt.MapClaims); ok { // && claims.VerifyExpiresAt() {
-			email := claims["email"].(string)
-			newCtx := user.NewContext(req.Context(), email)
-			req.WithContext(newCtx)
-			h(w, req)
-		} else {
-			http.Error(w, "Who are you?", 400)
-		}
+		http.Error(w, "Who are you?", 401)
 	}
 }
