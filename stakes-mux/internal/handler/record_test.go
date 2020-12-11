@@ -1,4 +1,4 @@
-package routes
+package handler
 
 import (
 	"encoding/json"
@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetRecords(t *testing.T) {
-	url := "/clock?from=2020-11-22&to=2020-11-23"
+	url := "/clock?from=yyyy-mm-dd&to=yyyy-mm-dd"
 	request, _ := http.NewRequest("GET", url, nil)
 	mux.ServeHTTP(&response, request)
 	// if writer.Code != 200 {}

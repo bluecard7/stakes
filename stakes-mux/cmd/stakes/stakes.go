@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	"stakes/internal/data"
-	"stakes/internal/routes"
+	"stakes/internal/handler"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	srv := http.Server{
 		Addr: ":8000",
 	}
-	http.HandleFunc("/clock", routes.ClockHandler(recordTable))
+	http.HandleFunc("/clock", handler.ClockHandler(recordTable))
 	// TODO:: ListenAndServeTLS later on with user auth
 	srv.ListenAndServe()
 }
