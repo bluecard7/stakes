@@ -30,7 +30,7 @@ type RecordTable interface {
 	FindRecordsInTimeFrame(email, fromISO, toISO string) []Record
 }
 
-// RecordTableImpl implements RecordTableInterface
+// RecordTableImpl implements RecordTable interface
 type RecordTableImpl struct {
 	db *sql.DB
 }

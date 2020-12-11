@@ -2,33 +2,25 @@ package main
 
 import (
 	"net/http"
+	"stakes/internal/config"
 	"stakes/internal/data"
 	"stakes/internal/handler"
+
+	"github.com/spf13/viper"
 )
 
 func main() {
-	// Handle configuration with flags
-	/*
-		viper.SetConfigName("properties")
-		viper.SetConfigType("yml")
-		viper.AddConfigPath("./configs")
-
-		err := viper.ReadInConfig()
-		if err != nil {
-			panic(err)
-		}
-	*/
-
+	config.ConfigureApp()
 	recordTable := data.InitRecordTable(&data.TableConfig{
-		User:     "",
-		Password: "",
-		Host:     "",
-		DBName:   "",
+		Username: viper.GetString("psql.username"),
+		Password: viper.GetString("psql.password"),
+		Host:     viper.GetString("psql.host"),
+		DBName:   viper.GetString("psql.dbName"),
 	})
 	srv := http.Server{
-		Addr: ":8000",
+		Addr: viper.GetString("server.addr"),
 	}
 	http.HandleFunc("/clock", handler.ClockHandler(recordTable))
-	// TODO:: ListenAndServeTLS later on with user auth
+	// TODO:: ListenAndServeTLS...?
 	srv.ListenAndServe()
 }
