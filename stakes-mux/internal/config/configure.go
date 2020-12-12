@@ -8,17 +8,13 @@ import (
 )
 
 func ConfigureApp() {
-	var (
-		envName string
-		cfgDir  string
-	)
-	flag.StringVar(&envName, "e", "local", "environment name")
-	flag.StringVar(&cfgDir, "c", "config", "location of config files")
+	envName := flag.String("e", "local", "environment name")
+	cfgDir := flag.String("c", "config", "location of config files")
 	flag.Parse()
 
-	viper.SetConfigName("properties." + envName)
+	viper.SetConfigName("properties." + *envName)
 	viper.SetConfigType("yml")
-	viper.AddConfigPath(cfgDir)
+	viper.AddConfigPath(*cfgDir)
 
 	err := viper.ReadInConfig()
 	if err != nil {

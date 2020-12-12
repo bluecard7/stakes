@@ -13,8 +13,7 @@ import (
 
 func main() {
 	config.ConfigureApp()
-
-	stakesSrv := mux.StakesServer{
+	stakesSrv := &mux.StakesServer{
 		Table: data.InitRecordTable(&data.TableConfig{
 			Username: viper.GetString("psql.username"),
 			Password: viper.GetString("psql.password"),
@@ -26,11 +25,11 @@ func main() {
 	}
 	stakesSrv.MapRoutes()
 
-	srv := http.Server{
+	httpSrv := http.Server{
 		Addr:    viper.GetString("server.addr"),
 		Handler: stakesSrv.Router,
 	}
 	// TODO:: ListenAndServeTLS...?
-	log.Println("Server listening...")
-	srv.ListenAndServe()
+	stakesSrv.Logger.Println("Server listening...")
+	httpSrv.ListenAndServe()
 }
