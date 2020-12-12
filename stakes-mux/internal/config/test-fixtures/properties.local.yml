@@ -1,0 +1,8 @@
+psql:
+  dbName: stakes
+  host: localhost
+  username: username
+  password: password
+
+server:
+  addr: "127.0.0.1:8000"
