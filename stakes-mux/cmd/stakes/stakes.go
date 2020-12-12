@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +13,14 @@ import (
 )
 
 func main() {
-	config.ConfigureApp()
+	envName := flag.String("e", "local", "environment name")
+	cfgDir := flag.String("c", "config", "location of config files")
+	flag.Parse()
+	config.ConfigureApp(&config.AppConfig{
+		EnvName: *envName,
+		Dir:     *cfgDir,
+	})
+
 	stakesSrv := &mux.StakesServer{
 		Table: data.InitRecordTable(&data.TableConfig{
 			Username: viper.GetString("psql.username"),

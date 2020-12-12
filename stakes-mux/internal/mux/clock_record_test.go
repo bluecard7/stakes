@@ -1,16 +1,20 @@
 package mux
 
 import (
+	"encoding/json"
 	"flag"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"stakes/internal/data"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// could test handleClock by running requests through it
+// targetting the switch cases and expecting some output
 
 type MockRecordTable struct {
 }
@@ -36,39 +40,75 @@ var (
 	integration = flag.Bool("integration", false, "runs integration tests instead of unit tests")
 )
 
-func TestClockRecord(t *testing.T) {
+func TestGetRecords(t *testing.T) {
 	if *integration {
 		t.Skip("Unit tests skipped - running integration tests instead")
 	}
 
 	stakesSrv := &StakesServer{
-		Table:  MockRecordTable{},
-		Router: http.NewServeMux(),
-		Logger: log.New(ioutil.Discard, "", 0),
+		Table: MockRecordTable{},
+		// Router: http.NewServeMux(),
+		// Logger: log.New(ioutil.Discard, "", 0),
 	}
 	stakesSrv.MapRoutes()
 
+	t.Run("request has no query params", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := testRequest(t, "POST", "/clock", nil)
+
+		if w.Code != 200 {
+		}
+		record := data.Record{}
+		err := json.Unmarshal(w.Body.Bytes(), &record)
+	})
+
+	t.Run("request has missing to query param", func(t *testing.T) {
+		url := "/clock?from=yyyy-mm-dd"
+		w := httptest.NewRecorder()
+		req := testRequest(t, "GET", url, nil)
+	})
+
+	t.Run("request has missing from query param", func(t *testing.T) {
+		url := "/clock?from=yyyy-mm-dd&to=yyyy-mm-dd"
+		w := httptest.NewRecorder()
+		req := testRequest(t, "GET", url, nil)
+	})
+
+	t.Run("request has query params other than to or from", func(t *testing.T) {
+		url := "/clock?from=yyyy-mm-dd&foo=yyyy-mm-dd"
+		w := httptest.NewRecorder()
+		req := testRequest(t, "GET", url, nil)
+
+		if w.Code != 200 {
+		}
+		record := data.Record{}
+		err := json.Unmarshal(w.Body.Bytes(), &record)
+	})
+
+	t.Run("request has both from and to", func(t *testing.T) {
+		url := "/clock?from=yyyy-mm-dd&to=yyyy-mm-dd"
+		w := httptest.NewRecorder()
+		req := testRequest(t, "GET", url, nil)
+	})
 }
 
-// func TestGetRecords(t *testing.T) {
-// 	url := "/clock?from=yyyy-mm-dd&to=yyyy-mm-dd"
-// 	request, _ := http.NewRequest("GET", url, nil)
-// 	response := *httptest.NewRecorder()
-// 	ServeHTTP(&response, request)
-// 	// if writer.Code != 200 {}
-// 	record := data.Record{}
-// 	err := json.Unmarshal(response.Body.Bytes(), &record)
-// 	if err != nil {
-// 	}
-// 	// check err and fields
-// }
+func TestClock(t *testing.T) {
+	t.Run("", func(t *testing.T) {
+		w := *httptest.NewRecorder()
+		req := testRequest(t, "POST", "/clock", nil)
 
-// func TestClock(t *testing.T) {
-// 	request, _ := http.NewRequest("POST", "/clock", nil)
-// 	response := *httptest.NewRecorder()
-// 	mux.ServeHTTP(&response, request)
-// }
+		if w.Code != 200 {
+		}
+		record := data.Record{}
+		err := json.Unmarshal(w.Body.Bytes(), &record)
+	})
+}
 
-func testRequest(t *testing.T) {
+func testRequest(t *testing.T, method, url string, body io.Reader) *http.Request {
 	t.Helper()
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		t.Fatal("Test request couldn't be created")
+	}
+	return req
 }

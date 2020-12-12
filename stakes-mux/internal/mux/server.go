@@ -15,5 +15,5 @@ type StakesServer struct {
 
 // MapRoutes links handler functions to routes
 func (s *StakesServer) MapRoutes() {
-	s.Router.HandleFunc("/clock", s.logRequest(s.authenticate(s.handleClock())))
+	s.Router.HandleFunc("/clock", s.logRequest(s.authenticate(s.handleClock)))
 }

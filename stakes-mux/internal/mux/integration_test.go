@@ -19,7 +19,10 @@ func TestIntegrations(t *testing.T) {
 	}
 
 	// parse flags in main and pass in to this to make configureApp configurable
-	config.ConfigureApp()
+	config.ConfigureApp(&config.AppConfig{
+		EnvName: "test",
+		Dir:     "../../config",
+	})
 	stakesSrv := &StakesServer{
 		Table: data.InitRecordTable(&data.TableConfig{
 			Username: viper.GetString("psql.username"),

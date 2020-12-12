@@ -32,5 +32,6 @@ func InitRecordTable(cfg *TableConfig) RecordTableImpl {
 	if err != nil {
 		log.Fatal("Failed to connect to database", err)
 	}
+	// return cleanup func?
 	return RecordTableImpl{db: db}
 }
