@@ -1,8 +1,9 @@
 package mux
 
 import (
+	"errors"
 	"flag"
-	"io"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"stakes/internal/data"
@@ -31,7 +32,14 @@ func (table MockRecordTable) FindUnfinishedRecord(email string) uuid.UUID {
 }
 
 func (table MockRecordTable) FindRecordsInTimeFrame(email string, from, to time.Time) []data.Record {
-	return nil
+	return []data.Record{
+		{
+			ID:       uuid.Nil,
+			Email:    "test@email.com",
+			ClockIn:  time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
+			ClockOut: time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
+		},
+	}
 }
 
 var (
@@ -46,85 +54,109 @@ func Test_getRecords(t *testing.T) {
 
 	stakesSrv := &StakesServer{
 		Table: MockRecordTable{},
-		// Router: http.NewServeMux(),
-		// Logger: log.New(ioutil.Discard, "", 0),
 	}
 
-	requestAndRespond := func(url string) *httptest.ResponseRecorder {
-		w := httptest.NewRecorder()
-		req := testRequest(t, "GET", url, nil)
-		stakesSrv.handleClock(w, req)
-		return w
-	}
-
-	expectError := func(w *httptest.ResponseRecorder) {
+	expectError := func(w *httptest.ResponseRecorder) error {
 		if w.Code != http.StatusBadRequest {
-			t.Fatalf("Expected code to be %d, got %d", http.StatusBadRequest, w.Code)
+			msg := fmt.Sprintf("Expected code to be %d, got %d", http.StatusBadRequest, w.Code)
+			return errors.New(msg)
 		}
 		errMsg := string(w.Body.Bytes())
 		expectedMsg := "Need to specify from and to dates in yyyy-mm-dd format as query params.\n"
 		if errMsg != expectedMsg {
-			t.Errorf("Expected response to be \"%s\", got \"%s\"", expectedMsg, errMsg)
+			msg := fmt.Sprintf("Expected response to be \"%s\", got \"%s\"", expectedMsg, errMsg)
+			return errors.New(msg)
 		}
+		return nil
 	}
 
-	// expectRecords := func(w *httptest.ResponseRecorder) {
-	// }
+	expectSuccess := func(w *httptest.ResponseRecorder) error {
+		return errors.New("not impl")
+	}
 
-	t.Run("request has no query params", func(t *testing.T) {
-		url := "/clock"
-		expectError(requestAndRespond(url))
-	})
+	tests := []struct {
+		Scenario       string
+		URL            string
+		VerifyResponse func(*httptest.ResponseRecorder) error
+	}{
+		{
+			Scenario:       "url has no query params",
+			URL:            "/clock",
+			VerifyResponse: expectError,
+		},
+		{
+			Scenario:       "url missing to query param",
+			URL:            "/clock?from=2006-01-02",
+			VerifyResponse: expectError,
+		},
+		{
+			Scenario:       "url missing from query param",
+			URL:            "/clock?to=2006-01-03",
+			VerifyResponse: expectError,
+		},
+		{
+			Scenario:       "url has query params instead of to or from",
+			URL:            "/clock?foo=2006-01-02&bar=2006-01-03",
+			VerifyResponse: expectError,
+		},
+		{
+			Scenario:       "url uses wrong format for times in query params",
+			URL:            "/clock?from=01-02-2016&to=01-03-2016",
+			VerifyResponse: expectError,
+		},
+		{
+			Scenario:       "url ignores query params other than from and to",
+			URL:            "/clock?from=2006-01-02&foo=2006-01-02&to=2006-01-03",
+			VerifyResponse: expectSuccess,
+		},
+		{
+			Scenario:       "request has both from and to",
+			URL:            "/clock?from=2006-01-02&to=2006-01-03",
+			VerifyResponse: expectSuccess,
+		},
+	}
 
-	t.Run("request missing to query param", func(t *testing.T) {
-		url := "/clock?from=2006-01-02"
-		expectError(requestAndRespond(url))
-	})
+	for _, test := range tests {
+		t.Run(test.Scenario, func(t *testing.T) {
+			req, err := http.NewRequest("GET", test.URL, nil)
+			if err != nil {
+				t.Fatal("test request could not be created")
+			}
+			req = req.WithContext(newContextWithUserID(req.Context(), "test@email.com"))
+			w := httptest.NewRecorder()
+			stakesSrv.handleClock(w, req)
 
-	t.Run("request missing from query param", func(t *testing.T) {
-		url := "/clock?to=2006-01-03"
-		expectError(requestAndRespond(url))
-	})
-
-	t.Run("request has query params instead of to or from", func(t *testing.T) {
-		url := "/clock?foo=2006-01-02&bar=2006-01-03"
-		expectError(requestAndRespond(url))
-	})
-
-	// t.Run("request ignores query params other than from and to", func(t *testing.T) {
-	// 	url := "/clock?from=2006-01-02&foo=2006-01-02&to=2006-01-03"
-	// 	w := httptest.NewRecorder()
-	// 	req := testRequest(t, "GET", url, nil)
-	// 	stakesSrv.handleClock(w, req)
-	// })
-
-	// // how to vet from and to are in the yyyy-mm-dd format?
-
-	// t.Run("request has both from and to", func(t *testing.T) {
-	// 	url := "/clock?from=2006-01-02&to=2006-01-03"
-	// 	w := httptest.NewRecorder()
-	// 	req := testRequest(t, "GET", url, nil)
-	// 	stakesSrv.handleClock(w, req)
-	// })
+			if err = test.VerifyResponse(w); err != nil {
+				t.Error(err)
+			}
+		})
+	}
 }
 
 func Test_clock(t *testing.T) {
-	// t.Run("", func(t *testing.T) {
-	// 	w := *httptest.NewRecorder()
-	// 	req := testRequest(t, "POST", "/clock", nil)
-
-	// 	if w.Code != 200 {
-	// 	}
-	// 	record := data.Record{}
-	// 	err := json.Unmarshal(w.Body.Bytes(), &record)
-	// })
-}
-
-func testRequest(t *testing.T, method, url string, body io.Reader) *http.Request {
-	t.Helper()
-	req, err := http.NewRequest(method, url, body)
-	if err != nil {
-		t.Fatal("Test request couldn't be created")
+	tests := []struct {
+		Scenario       string
+		VerifyResponse func(*httptest.ResponseRecorder) error
+	}{
+		{
+			Scenario:       "",
+			VerifyResponse: nil,
+		},
 	}
-	return req
+
+	for _, test := range tests {
+		t.Run(test.Scenario, func(t *testing.T) {
+			req, err := http.NewRequest("POST", "/clock", nil)
+			if err != nil {
+				t.Fatal("test request could not be created")
+			}
+			req = req.WithContext(newContextWithUserID(req.Context(), "test@email.com"))
+			w := httptest.NewRecorder()
+			stakesSrv.handleClock(w, req)
+
+			if err = test.VerifyResponse(w); err != nil {
+				t.Error(err)
+			}
+		})
+	}
 }
