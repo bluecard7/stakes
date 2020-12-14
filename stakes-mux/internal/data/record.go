@@ -27,7 +27,7 @@ type RecordTable interface {
 	InsertRecord(email string, clockedAt time.Time) *Record
 	FinishRecord(id uuid.UUID, clockedAt time.Time) *Record
 	FindUnfinishedRecord(email string) uuid.UUID
-	FindRecordsInTimeFrame(email, fromISO, toISO string) []Record
+	FindRecordsInTimeFrame(email string, from, to time.Time) []Record
 }
 
 // RecordTableImpl implements RecordTable interface
@@ -111,15 +111,13 @@ func (table RecordTableImpl) FindUnfinishedRecord(email string) uuid.UUID {
 // whose clockIn is in [fromISO, toISO].
 // fromISO and toISO are ISO8601 strings that represent dates.
 // toISO needs to be one day after the intended end of range, or it will not be included.
-func (table RecordTableImpl) FindRecordsInTimeFrame(email, from, to string) []Record { // map result from * to literals?
+func (table RecordTableImpl) FindRecordsInTimeFrame(email string, from, to time.Time) []Record { // map result from * to literals?
 	queryStr := `
 		select * from clock_records 
 		where email = $1 and clockIn <@ tsrange($2, $3, '[]')
 	`
-	fromTime, _ := time.Parse("2006-01-02", from)
-	toTime, _ := time.Parse("2006-01-02", to)
 	records := []Record{}
-	rows, err := table.db.Query(queryStr, email, fromTime, toTime)
+	rows, err := table.db.Query(queryStr, email, from, to)
 	if err == nil && rows != nil {
 		for rows.Next() {
 			record := Record{}

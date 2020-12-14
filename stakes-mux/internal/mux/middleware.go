@@ -2,7 +2,6 @@ package mux
 
 import (
 	"net/http"
-	"stakes/internal/user"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -31,7 +30,7 @@ func (s *StakesServer) authenticate(h http.HandlerFunc) http.HandlerFunc {
 			// TODO:: verify expireAt, and maybe other attrs like Issuers etc.
 			if claims, ok := token.Claims.(jwt.MapClaims); ok { // && claims.VerifyExpiresAt() {
 				email := claims["email"].(string)
-				newCtx := user.NewContext(req.Context(), email)
+				newCtx := newContextWithUserID(req.Context(), email)
 				h(w, req.WithContext(newCtx))
 				return
 			}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"stakes/internal/data"
-	"stakes/internal/user"
 
 	"github.com/google/uuid"
 )
@@ -21,12 +20,17 @@ func (s *StakesServer) handleClock(w http.ResponseWriter, req *http.Request) {
 }
 
 // curl -H 'Content-Type: application/json' 'http://localhost:8000/clock?from=2020-11-22&to=2020-11-23'
+// getRecords handles requests for GET /clock.
+// getRecords returns the recorded clock in/out times of the user between the
+// specified from and to dates.
+// Dates are expected to be in yyyy-mm-dd format.
 func (s *StakesServer) getRecords(w http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
-	email, _ := user.FromContext(req.Context())
-	from, to := query.Get("from"), query.Get("to")
-	if from == "" || to == "" {
-		http.Error(w, "Need to specify from and to dates in yyyy-mm-dd", http.StatusBadRequest)
+	email, _ := userIDFromContext(req.Context())
+	from, failedFrom := time.Parse("2006-01-02", query.Get("from"))
+	to, failedTo := time.Parse("2006-01-02", query.Get("to"))
+	if failedFrom != nil || failedTo != nil {
+		http.Error(w, "Need to specify from and to dates in yyyy-mm-dd format as query params.", http.StatusBadRequest)
 		return
 	}
 	// how to handle err here?
@@ -37,10 +41,12 @@ func (s *StakesServer) getRecords(w http.ResponseWriter, req *http.Request) {
 }
 
 // curl -X POST -d '{"email":"my@email.com"}' -H 'Content-Type: application/json' http://localhost:8000/clock
+// clock handles requests for POST /clock.
+// clock() clocks in/out the user in the system.
 func (s *StakesServer) clock(w http.ResponseWriter, req *http.Request) {
 	var record *data.Record
 	clockedAt := time.Now()
-	email, _ := user.FromContext(req.Context())
+	email, _ := userIDFromContext(req.Context())
 	if id := s.Table.FindUnfinishedRecord(email); id == uuid.Nil {
 		record = s.Table.InsertRecord(email, clockedAt)
 	} else {
