@@ -10,9 +10,6 @@ import (
 // I think integrations in context of this package is chaining the handlers and
 // executing the endpoints on the test database
 func TestIntegrations(t *testing.T) {
-	// if !*integration {
-	// 	t.Skip("Integration tests skipped - running unit tests instead")
-	// }
 	// test malformed urls
 
 	config.ConfigureApp(&config.AppConfig{
