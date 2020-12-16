@@ -15,13 +15,54 @@ import (
 	"github.com/google/uuid"
 )
 
-type MockRecordTable struct {
+// fakeuuidgen tracks and outputs uuids deterministically for test purposes
+type fakeuuidgen struct {
+	bytes []byte
+	pos   int
+}
+
+func (f fakeuuidgen) incID() {
+	if f.bytes[f.pos] < 127 {
+		f.bytes[f.pos]++
+		return
+	}
+	f.bytes[f.pos-1]++
+	for pos := f.pos; pos < 16 && f.bytes[pos] == 127; pos++ {
+		f.bytes[pos] = 0
+	}
+	if f.pos--; f.pos < 0 {
+		panic("how did you use up the entire UUID space...?")
+	}
+}
+
+func (f fakeuuidgen) reset() {
+	for i := range f.bytes {
+		f.bytes[i] = 0
+	}
+	f.pos = 15
+}
+
+func (f fakeuuidgen) uuid() uuid.UUID {
+	f.incID()
+	return uuid.Must(uuid.FromBytes(f.bytes))
+}
+
+var (
+	update = flag.Bool("u", false, "update .golden.json files")
+	fake   = fakeuuidgen{
+		bytes: make([]byte, 16),
+		pos:   15,
+	}
+)
+
+// Implements Record Table interface
+type mockRecordTable struct {
 	db []data.Record
 }
 
-func (table MockRecordTable) InsertRecord(email string, clockedAt time.Time) *data.Record {
+func (table mockRecordTable) InsertRecord(email string, clockedAt time.Time) *data.Record {
 	record := data.Record{
-		ID:      uuid.New(),
+		ID:      fake.uuid(),
 		Email:   email,
 		ClockIn: time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
@@ -29,7 +70,7 @@ func (table MockRecordTable) InsertRecord(email string, clockedAt time.Time) *da
 	return &record
 }
 
-func (table MockRecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) *data.Record {
+func (table mockRecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) *data.Record {
 	for _, record := range table.db {
 		if record.ID == id && !record.ClockIn.IsZero() && record.ClockOut.IsZero() {
 			record.ClockOut = time.Date(2006, 1, 2, 8, 0, 0, 0, time.UTC)
@@ -39,7 +80,7 @@ func (table MockRecordTable) FinishRecord(id uuid.UUID, clockedAt time.Time) *da
 	return nil
 }
 
-func (table MockRecordTable) FindUnfinishedRecord(email string) uuid.UUID {
+func (table mockRecordTable) FindUnfinishedRecord(email string) uuid.UUID {
 	for _, record := range table.db {
 		if record.Email == email && !record.ClockIn.IsZero() && record.ClockOut.IsZero() {
 			return record.ID
@@ -48,7 +89,7 @@ func (table MockRecordTable) FindUnfinishedRecord(email string) uuid.UUID {
 	return uuid.Nil
 }
 
-func (table MockRecordTable) FindRecordsInTimeFrame(email string, from, to time.Time) []data.Record {
+func (table mockRecordTable) FindRecordsInTimeFrame(email string, from, to time.Time) []data.Record {
 	records := make([]data.Record, 0, 3)
 	for _, record := range table.db {
 		if record.Email == email {
@@ -58,16 +99,37 @@ func (table MockRecordTable) FindRecordsInTimeFrame(email string, from, to time.
 	return records
 }
 
-var (
-	update = flag.Bool("u", false, "update .golden.json files")
-)
+// Unit tests
+
+// verifies recorded response with golden file
+func verifySuccess(goldenFile string) func(w *httptest.ResponseRecorder) error {
+	return func(w *httptest.ResponseRecorder) error {
+		if w.Code != http.StatusOK {
+			msg := fmt.Sprintf("Expected code to be %d, got %d.", http.StatusOK, w.Code)
+			return errors.New(msg)
+		}
+		got := w.Body.Bytes()
+		if *update {
+			ioutil.WriteFile(goldenFile, got, 0644)
+		}
+		expected, err := ioutil.ReadFile(goldenFile)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(expected, got) {
+			return errors.New("Recorded response didn't match golden file.")
+		}
+		return nil
+	}
+}
 
 func Test_getRecords(t *testing.T) {
+	fake.reset()
 	stakesSrv := &StakesServer{
-		Table: MockRecordTable{
+		Table: mockRecordTable{
 			db: []data.Record{
 				{
-					ID:       uuid.New(),
+					ID:       fake.uuid(),
 					Email:    "test@email.com",
 					ClockIn:  time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
 					ClockOut: time.Date(2006, 1, 2, 8, 0, 0, 0, time.UTC),
@@ -86,26 +148,6 @@ func Test_getRecords(t *testing.T) {
 		if errMsg != expectedMsg {
 			msg := fmt.Sprintf("Expected response to be \"%s\", got \"%s\"", expectedMsg, errMsg)
 			return errors.New(msg)
-		}
-		return nil
-	}
-
-	verifySuccess := func(w *httptest.ResponseRecorder) error {
-		if w.Code != http.StatusOK {
-			msg := fmt.Sprintf("Expected code to be %d, got %d.", http.StatusOK, w.Code)
-			return errors.New(msg)
-		}
-		got := w.Body.Bytes()
-		goldenFile := "expectedRecordsOutput.json"
-		if *update {
-			ioutil.WriteFile(goldenFile, got, 0644)
-		}
-		expected, err := ioutil.ReadFile(goldenFile)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(expected, got) {
-			return errors.New("Recorded response didn't match golden file.")
 		}
 		return nil
 	}
@@ -143,12 +185,12 @@ func Test_getRecords(t *testing.T) {
 		{
 			Scenario:       "url ignores query params other than from and to",
 			URL:            "/clock?from=2006-01-02&foo=2006-01-02&to=2006-01-03",
-			VerifyResponse: verifySuccess,
+			VerifyResponse: verifySuccess("expectedRecordsOutput.json"),
 		},
 		{
 			Scenario:       "request has both from and to",
 			URL:            "/clock?from=2006-01-02&to=2006-01-03",
-			VerifyResponse: verifySuccess,
+			VerifyResponse: verifySuccess("expectedRecordsOutput.json"),
 		},
 	}
 
@@ -170,22 +212,16 @@ func Test_getRecords(t *testing.T) {
 }
 
 func Test_clock(t *testing.T) {
-
+	fake.reset()
 	stakesSrv := &StakesServer{
-		Table: MockRecordTable{
+		Table: mockRecordTable{
 			db: []data.Record{
 				{
-					ID:       uuid.New(),
+					ID:       fake.uuid(),
 					Email:    "test2@email.com",
 					ClockIn:  time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
 					ClockOut: time.Time{},
 				},
-				// {
-				// 	ID:       uuid.New(),
-				// 	Email:    "test2@email.com",
-				// 	ClockIn:  time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
-				// 	ClockOut: time.Date(2006, 1, 2, 8, 0, 0, 0, time.UTC),
-				// },
 			},
 		},
 	}
@@ -194,26 +230,6 @@ func Test_clock(t *testing.T) {
 	// 	return errors.New("do these come up in unit testing?")
 	// }
 
-	verifySuccess := func(goldenFile string) func(w *httptest.ResponseRecorder) error {
-		return func(w *httptest.ResponseRecorder) error {
-			if w.Code != http.StatusOK {
-				msg := fmt.Sprintf("Expected code to be %d, got %d.", http.StatusOK, w.Code)
-				return errors.New(msg)
-			}
-			got := w.Body.Bytes()
-			if *update {
-				ioutil.WriteFile(goldenFile, got, 0644)
-			}
-			expected, err := ioutil.ReadFile(goldenFile)
-			if err != nil {
-				return err
-			}
-			if !bytes.Equal(expected, got) {
-				return errors.New("Recorded response didn't match golden file.")
-			}
-			return nil
-		}
-	}
 	tests := []struct {
 		Scenario       string
 		Email          string
