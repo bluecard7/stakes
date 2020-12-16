@@ -53,7 +53,7 @@ func (s *StakesServer) clock(w http.ResponseWriter, req *http.Request) {
 		record = s.Table.FinishRecord(id, clockedAt)
 	}
 	if record == nil {
-		http.Error(w, "Sorry! Something failed on our end when you clocked in/out.", 404)
+		http.Error(w, "Sorry! Something failed on our end when you clocked in/out.", http.StatusInternalServerError)
 		return
 	}
 	respondJSON(w, *record)
@@ -63,7 +63,7 @@ func respondJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	data, err := json.Marshal(v)
 	if err != nil {
-		http.Error(w, "Sorry! Couldn't send back the response.", 404)
+		http.Error(w, "Sorry! Couldn't send back the response.", http.StatusInternalServerError)
 	} else {
 		w.Write(data)
 	}

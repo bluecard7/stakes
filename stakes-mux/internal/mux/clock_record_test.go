@@ -102,22 +102,25 @@ func (table mockRecordTable) FindRecordsInTimeFrame(email string, from, to time.
 // Unit tests
 
 // verifies recorded response with golden file
-func verifySuccess(goldenFile string) func(w *httptest.ResponseRecorder) error {
+// could extend this to errors too.
+func verifySuccess(goldenFileName string) func(w *httptest.ResponseRecorder) error {
 	return func(w *httptest.ResponseRecorder) error {
 		if w.Code != http.StatusOK {
 			msg := fmt.Sprintf("Expected code to be %d, got %d.", http.StatusOK, w.Code)
 			return errors.New(msg)
 		}
+		goldenFilePath := "goldenfiles/" + goldenFileName
 		got := w.Body.Bytes()
 		if *update {
-			ioutil.WriteFile(goldenFile, got, 0644)
+			ioutil.WriteFile(goldenFilePath, got, 0644)
 		}
-		expected, err := ioutil.ReadFile(goldenFile)
+		expected, err := ioutil.ReadFile(goldenFilePath)
 		if err != nil {
 			return err
 		}
 		if !bytes.Equal(expected, got) {
-			return errors.New("Recorded response didn't match golden file.")
+			msg := fmt.Sprintf("Expected response to be %s, got %s", expected, got)
+			return errors.New(msg)
 		}
 		return nil
 	}

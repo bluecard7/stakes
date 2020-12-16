@@ -7,7 +7,6 @@ import (
 )
 
 // http://peter.bourgon.org/go-best-practices-2016/#logging-and-instrumentation
-// According to this, should explicitly use a logger (I'll put it in ctx again)
 // USE or RED?
 func (s *StakesServer) logRequest(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
