@@ -8,8 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// http://peter.bourgon.org/go-best-practices-2016/#logging-and-instrumentation
-// USE or RED?
+// http://peter.bourgon.org/go-best-practices-2016/#logging-and-instrumentation USE or RED?
 func (s *StakesServer) logRequest(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		s.Logger.Println(req.Method, req.RequestURI)
@@ -23,15 +22,15 @@ func (s *StakesServer) logRequest(h http.HandlerFunc) http.HandlerFunc {
 func (s *StakesServer) authenticate(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		tokenStr := req.Header.Get("Authorization")
-		token, err := jwt.ParseWithClaims(tokenStr, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		token, _ := jwt.ParseWithClaims(tokenStr, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 			}
 			return []byte(viper.GetString("JWT_SECRET")), nil
 		})
-		if err == nil {
-			// TODO:: verify expireAt, and maybe other attrs like Issuers etc.
-			if claims, ok := token.Claims.(jwt.MapClaims); ok { // && claims.VerifyExpiresAt() {
+		if token.Valid {
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if ok && claims.VerifyIssuer(viper.GetString("JWT_ISSUER"), true) {
 				email := claims["email"].(string)
 				newCtx := newContextWithUserID(req.Context(), email)
 				h(w, req.WithContext(newCtx))
