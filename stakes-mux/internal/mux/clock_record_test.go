@@ -2,7 +2,6 @@ package mux
 
 import (
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -106,8 +105,7 @@ func (table mockRecordTable) FindRecordsInTimeFrame(email string, from, to time.
 func verifySuccess(goldenFileName string) func(w *httptest.ResponseRecorder) error {
 	return func(w *httptest.ResponseRecorder) error {
 		if w.Code != http.StatusOK {
-			msg := fmt.Sprintf("Expected code to be %d, got %d.", http.StatusOK, w.Code)
-			return errors.New(msg)
+			return fmt.Errorf("Expected code to be %d, got %d", http.StatusOK, w.Code)
 		}
 		goldenFilePath := "goldenfiles/" + goldenFileName
 		got := w.Body.Bytes()
@@ -119,8 +117,7 @@ func verifySuccess(goldenFileName string) func(w *httptest.ResponseRecorder) err
 			return err
 		}
 		if !bytes.Equal(expected, got) {
-			msg := fmt.Sprintf("Expected response to be %s, got %s", expected, got)
-			return errors.New(msg)
+			return fmt.Errorf("Expected response to be %s, got %s", expected, got)
 		}
 		return nil
 	}
@@ -143,14 +140,12 @@ func Test_getRecords(t *testing.T) {
 
 	verifyError := func(w *httptest.ResponseRecorder) error {
 		if w.Code != http.StatusBadRequest {
-			msg := fmt.Sprintf("Expected code to be %d, got %d", http.StatusBadRequest, w.Code)
-			return errors.New(msg)
+			return fmt.Errorf("Expected code to be %d, got %d", http.StatusBadRequest, w.Code)
 		}
 		errMsg := string(w.Body.Bytes())
 		expectedMsg := "Need to specify from and to dates in yyyy-mm-dd format as query params.\n"
 		if errMsg != expectedMsg {
-			msg := fmt.Sprintf("Expected response to be \"%s\", got \"%s\"", expectedMsg, errMsg)
-			return errors.New(msg)
+			return fmt.Errorf("Expected response to be \"%s\", got \"%s\"", expectedMsg, errMsg)
 		}
 		return nil
 	}

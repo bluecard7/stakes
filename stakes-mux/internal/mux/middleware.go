@@ -1,9 +1,11 @@
 package mux
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/spf13/viper"
 )
 
 // http://peter.bourgon.org/go-best-practices-2016/#logging-and-instrumentation
@@ -22,8 +24,10 @@ func (s *StakesServer) authenticate(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		tokenStr := req.Header.Get("Authorization")
 		token, err := jwt.ParseWithClaims(tokenStr, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-			// get secret from file, env, etc
-			return []byte("secret"), nil
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(viper.GetString("JWT_SECRET")), nil
 		})
 		if err == nil {
 			// TODO:: verify expireAt, and maybe other attrs like Issuers etc.
@@ -34,6 +38,6 @@ func (s *StakesServer) authenticate(h http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 		}
-		http.Error(w, "Who are you?", 401)
+		http.Error(w, "Your JWT token is wack", 401)
 	}
 }
